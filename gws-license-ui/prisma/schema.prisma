@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Auth (NextAuth adapter tables) ──────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  ext_expires_in    Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  role          String    @default("VIEWER")
+  lastLogin     DateTime?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// UserRole values: "ADMIN" | "OPERATOR" | "VIEWER"
+
+// ── Domain Models ────────────────────────────────────────────────────────────
+
+model LicensingAgency {
+  id                  String     @id @default(cuid())
+  name                String
+  state               String
+  websiteUrl          String
+  crawlerKey          String     @unique
+  isCaptchaBlocked    Boolean    @default(false)
+  isUrlBroken         Boolean    @default(false)
+  isPasswordProtected Boolean    @default(false)
+  notes               String?
+  lastSuccessAt       DateTime?
+  suppliers           Supplier[]
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([state])
+  @@index([isUrlBroken])
+}
+
+model Supplier {
+  id               String              @id @default(cuid())
+  supplierName     String
+  npi              String?
+  state            String
+  licenseNumber    String
+  licenseType      String
+  agencyId         String
+  agency           LicensingAgency     @relation(fields: [agencyId], references: [id])
+  isActive         Boolean             @default(true)
+  lastVerifiedAt   DateTime?
+  lastStatus       String?
+  verifications    LicenseVerification[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([licenseNumber, agencyId])
+  @@index([state])
+  @@index([lastStatus])
+  @@index([agencyId])
+}
+
+model VerificationRun {
+  id            String                @id @default(cuid())
+  status        String                @default("PENDING")
+  startedAt     DateTime?
+  completedAt   DateTime?
+  totalCount    Int                   @default(0)
+  successCount  Int                   @default(0)
+  failedCount   Int                   @default(0)
+  manualCount   Int                   @default(0)
+  errorCount    Int                   @default(0)
+  triggeredBy   String?
+  notes         String?
+  verifications LicenseVerification[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+// RunStatus values: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "PARTIAL"
+
+model LicenseVerification {
+  id               String             @id @default(cuid())
+  runId            String
+  run              VerificationRun    @relation(fields: [runId], references: [id])
+  supplierId       String
+  supplier         Supplier           @relation(fields: [supplierId], references: [id])
+  status           String
+  effectiveDate    DateTime?
+  terminationDate  DateTime?
+  rawData          String?
+  errorMessage     String?
+  requiresManual   Boolean            @default(false)
+  manualReason     String?
+  manualResolvedAt DateTime?
+  manualResolvedBy String?
+  verifiedAt       DateTime           @default(now())
+
+  @@index([runId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([requiresManual])
+}
+
+// VerificationStatus values: "ACTIVE" | "EXPIRED" | "TERMINATED" | "NOT_FOUND" | "ERROR" | "MANUAL_REQUIRED" | "PENDING"
+// ManualReason values: "CAPTCHA_REQUIRED" | "BROKEN_URL" | "PASSWORD_PROTECTED" | "COMPLEX_NAVIGATION" | "SITE_UNAVAILABLE" | "OTHER"
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  userId     String
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+}

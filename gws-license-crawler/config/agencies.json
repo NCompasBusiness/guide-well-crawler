@@ -1,0 +1,145 @@
+[
+  {
+    "crawlerKey": "fl_ahca",
+    "name": "Florida Agency for Health Care Administration",
+    "state": "FL",
+    "websiteUrl": "https://apps.ahca.myflorida.com/hcaf_internet/Home/ProvidersAndFacilitiesSearch",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Simple license number search form. Returns status and expiry date."
+  },
+  {
+    "crawlerKey": "fl_dbpr",
+    "name": "Florida Department of Business and Professional Regulation",
+    "state": "FL",
+    "websiteUrl": "https://www.myfloridalicense.com/wl11.asp",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "License verification by license number. Straightforward GET request."
+  },
+  {
+    "crawlerKey": "ga_composite_medical",
+    "name": "Georgia Composite Medical Board",
+    "state": "GA",
+    "websiteUrl": "https://gcmb.mylicense.com/eGov/",
+    "tier": 2,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Multi-step navigation. Requires Selenium with explicit waits."
+  },
+  {
+    "crawlerKey": "ga_professional_licensing",
+    "name": "Georgia Secretary of State Professional Licensing",
+    "state": "GA",
+    "websiteUrl": "https://sos.ga.gov/index.php/licensing/plb/verify_license",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Simple lookup by license number and type."
+  },
+  {
+    "crawlerKey": "tx_dshs",
+    "name": "Texas Department of State Health Services",
+    "state": "TX",
+    "websiteUrl": "https://vo.ras.dshs.state.tx.us/",
+    "tier": 2,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Requires navigation through facility type selection before license lookup."
+  },
+  {
+    "crawlerKey": "tx_hhs",
+    "name": "Texas Health and Human Services",
+    "state": "TX",
+    "websiteUrl": "https://hhs.texas.gov/doing-business-hhs/provider-portals/health-care-professionals/verify-license-certification",
+    "tier": 3,
+    "isCaptchaBlocked": true,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Google reCAPTCHA v2. Requires human-in-the-loop or captcha solving service."
+  },
+  {
+    "crawlerKey": "nc_medical_board",
+    "name": "North Carolina Medical Board",
+    "state": "NC",
+    "websiteUrl": "https://www.ncmedboard.org/license-verification",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "API-backed license lookup. POST request returns JSON."
+  },
+  {
+    "crawlerKey": "oh_medical_board",
+    "name": "Ohio State Medical Board",
+    "state": "OH",
+    "websiteUrl": "https://elicense.ohio.gov/OH_VerifyLicense",
+    "tier": 2,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "eLicense portal. Requires selecting license type from dropdown first."
+  },
+  {
+    "crawlerKey": "pa_dos",
+    "name": "Pennsylvania Department of State",
+    "state": "PA",
+    "websiteUrl": "https://www.dos.pa.gov/ProfessionalLicensing/LicenseRenewalInformation/Pages/default.aspx",
+    "tier": 3,
+    "isCaptchaBlocked": true,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Cloudflare challenge on some endpoints. Investigate alternative lookup URL."
+  },
+  {
+    "crawlerKey": "ny_opmc",
+    "name": "New York Office of the Professions",
+    "state": "NY",
+    "websiteUrl": "http://www.op.nysed.gov/opsearches.htm",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "License verification search. Note: HTTP (not HTTPS) — verify still active."
+  },
+  {
+    "crawlerKey": "ca_dhcs",
+    "name": "California Department of Health Care Services",
+    "state": "CA",
+    "websiteUrl": "https://www.dhcs.ca.gov/provgovpart/Pages/Licensing-Certification.aspx",
+    "tier": 2,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Multi-step form with county selection required before license lookup."
+  },
+  {
+    "crawlerKey": "il_idfpr",
+    "name": "Illinois Department of Financial and Professional Regulation",
+    "state": "IL",
+    "websiteUrl": "https://online-dfpr.micropact.com/lookup/licenselookup.aspx",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "ASP.NET form. Requires posting ViewState. Use requests + BeautifulSoup."
+  },
+  {
+    "crawlerKey": "nj_dca",
+    "name": "New Jersey Division of Consumer Affairs",
+    "state": "NJ",
+    "websiteUrl": "https://newjersey.mylicense.com/verification/",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "Standard myLicense portal. Consistent across multiple license types."
+  }
+]
