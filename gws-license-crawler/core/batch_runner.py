@@ -25,11 +25,46 @@ from crawlers.base_crawler import VerificationResult
 
 logger = logging.getLogger(__name__)
 
+# When a crawler returns NOT_FOUND, automatically retry with these agencies in order.
+# Handles FL licenses that belong to AHCA or DBPR instead of DOH MQA.
+_FALLBACK_CRAWLERS: dict[str, list[str]] = {
+    "fl_doh_mqa": ["fl_dbpr"],
+    "fl_dbpr":    ["fl_doh_mqa"],
+}
+
 
 @dataclass
 class _Task:
     supplier: dict[str, Any]
     run_id: str
+
+
+def _recompute_counters_from_db(run_id: str) -> dict[str, int]:
+    """Recompute success/failed/manual/errors for a run after manual-assist
+    has flipped some rows from MANUAL_REQUIRED to real statuses."""
+    import sqlite3
+    from config.settings import settings as _settings
+    conn = sqlite3.connect(_settings.DB_PATH, timeout=30)
+    try:
+        cur = conn.execute(
+            '''SELECT status, "requiresManual"
+                 FROM "LicenseVerification"
+                WHERE "runId" = ?''',
+            (run_id,),
+        )
+        counters = {"success": 0, "failed": 0, "manual": 0, "errors": 0}
+        for status, requires_manual in cur.fetchall():
+            if status == "ACTIVE":
+                counters["success"] += 1
+            elif requires_manual:
+                counters["manual"] += 1
+            elif status in ("EXPIRED", "TERMINATED", "NOT_FOUND"):
+                counters["failed"] += 1
+            else:
+                counters["errors"] += 1
+        return counters
+    finally:
+        conn.close()
 
 
 def _process_task(task: _Task) -> tuple[str, VerificationResult]:
@@ -64,6 +99,15 @@ def _process_task(task: _Task) -> tuple[str, VerificationResult]:
             error_message="Agency site is CAPTCHA protected",
         )
 
+    # Fast-path: password-protected sites without configured credentials go to manual
+    if supplier.get("isPasswordProtected"):
+        return supplier["id"], VerificationResult(
+            status="MANUAL_REQUIRED",
+            requires_manual=True,
+            manual_reason="PASSWORD_PROTECTED",
+            error_message="Agency site requires login credentials (none configured)",
+        )
+
     crawler = crawler_cls(settings)
     result = crawler.verify_with_retry(
         license_number=supplier["licenseNumber"],
@@ -71,6 +115,23 @@ def _process_task(task: _Task) -> tuple[str, VerificationResult]:
         max_retries=settings.MAX_RETRIES,
     )
     time.sleep(settings.RATE_LIMIT_SECS)
+
+    # If NOT_FOUND, try fallback agencies (e.g. FL license in wrong board)
+    if result.status == "NOT_FOUND" and crawler_key in _FALLBACK_CRAWLERS:
+        for fallback_key in _FALLBACK_CRAWLERS[crawler_key]:
+            fallback_cls = get_crawler(fallback_key)
+            if not fallback_cls:
+                continue
+            logger.debug("Trying fallback %s for %s", fallback_key, supplier["licenseNumber"])
+            fallback_result = fallback_cls(settings).verify_with_retry(
+                license_number=supplier["licenseNumber"],
+                supplier_name=supplier["supplierName"],
+                max_retries=1,
+            )
+            time.sleep(settings.RATE_LIMIT_SECS)
+            if fallback_result.status != "NOT_FOUND":
+                return supplier["id"], fallback_result
+
     return supplier["id"], result
 
 
@@ -148,6 +209,13 @@ def run_batch() -> bool:
 
     for agency_id in agency_success:
         db_client.update_agency_last_success(agency_id)
+
+    # Manual-assist phase: interactively process CAPTCHA_REQUIRED rows one at
+    # a time with a real browser, then recompute counters from the DB.
+    from core import manual_assist
+    processed = manual_assist.run_manual_assist_for_run(run_id)
+    if processed > 0:
+        counters = _recompute_counters_from_db(run_id)
 
     total = len(suppliers)
     duration = int((datetime.utcnow() - started_at).total_seconds() / 60)

@@ -6,6 +6,8 @@ import { RecentRuns } from '@/components/dashboard/RecentRuns'
 import { RunStatusChart } from '@/components/dashboard/RunStatusChart'
 import { ActiveRunBanner } from '@/components/dashboard/ActiveRunBanner'
 import { StartRunButton } from '@/components/dashboard/StartRunButton'
+import { AutoRefresh } from '@/components/AutoRefresh'
+import type { RunStatus } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +35,7 @@ export default async function DashboardPage() {
         manualCount: true, errorCount: true, triggeredBy: true,
       },
     }),
-    db.verificationRun.findFirst({ where: { status: 'RUNNING' } }),
+    db.verificationRun.findFirst({ where: { status: { in: ['PENDING', 'RUNNING'] } } }),
   ])
 
   // Status breakdown from latest completed run
@@ -49,8 +51,11 @@ export default async function DashboardPage() {
 
   const canTriggerRun = session?.user.role === 'ADMIN' || session?.user.role === 'OPERATOR'
 
+  const typedRecentRuns = recentRuns.map((r) => ({ ...r, status: r.status as RunStatus }))
+
   return (
     <div className="space-y-6">
+      {activeRun && <AutoRefresh intervalMs={8000} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -83,7 +88,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <RunStatusChart data={statusBreakdown} runDate={latestRun?.completedAt ?? null} />
-        <RecentRuns runs={recentRuns} />
+        <RecentRuns runs={typedRecentRuns} />
       </div>
     </div>
   )

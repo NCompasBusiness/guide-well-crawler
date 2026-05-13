@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { VerificationRun } from '@prisma/client'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 
 export function ActiveRunBanner({ run: initialRun }: Props) {
   const [run, setRun] = useState(initialRun)
+  const router = useRouter()
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -16,14 +18,14 @@ export function ActiveRunBanner({ run: initialRun }: Props) {
       if (res.ok) {
         const data = await res.json()
         setRun(data)
-        if (data.status !== 'RUNNING') {
+        if (data.status !== 'RUNNING' && data.status !== 'PENDING') {
           clearInterval(interval)
-          window.location.reload()
+          router.refresh()
         }
       }
-    }, 30_000)
+    }, 8_000)
     return () => clearInterval(interval)
-  }, [run.id])
+  }, [run.id, router])
 
   const processed = run.successCount + run.errorCount + run.manualCount
   const pct = run.totalCount > 0 ? Math.round((processed / run.totalCount) * 100) : 0

@@ -2,8 +2,11 @@
 Florida agency crawlers.
 
 Tier 1 — straightforward form submissions, no CAPTCHA.
-  fl_ahca : Florida Agency for Health Care Administration
-  fl_dbpr : Florida Department of Business and Professional Regulation
+  fl_ahca     : Florida Agency for Health Care Administration
+  fl_dbpr     : Florida Department of Business and Professional Regulation
+  fl_doh_mqa  : Florida Department of Health — Medical Quality Assurance portal
+                (covers Medical Board, Pharmacy, Podiatrists, Optometry, PT, OT,
+                Orthotics/Prosthetics, Respiratory — ~13 license types under one URL)
 """
 from __future__ import annotations
 
@@ -138,4 +141,84 @@ class FlDbprCrawler(BaseCrawler):
             status="NOT_FOUND",
             raw_data=cells,
             error_message=f"Unrecognized DBPR status: {cells.get('Status')}",
+        )
+
+
+class FlDohMqaCrawler(BaseCrawler):
+    """
+    Florida DOH Medical Quality Assurance — license verification.
+
+    ASP.NET MVC form. Flow:
+      1. GET the search page to capture __RequestVerificationToken and session cookie
+      2. POST license number back to the same URL
+      3. Server redirects to a detail page (LicenseVerification?LicInd=...&Procde=...)
+      4. Parse the <dl class="dl-horizontal"> block: <dt> labels / <dd> values
+    """
+    REQUIRES_SELENIUM = False
+    SEARCH_URL = "https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders"
+
+    def verify(self, license_number: str, supplier_name: str | None = None) -> VerificationResult:
+        # FL DOH MQA stores license numbers without spaces or hyphens (e.g. "TT7317" not "TT 7317")
+        license_number = re.sub(r"[\s\-]", "", license_number).upper()
+
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 GWSBot/1.0",
+            "Referer": self.SEARCH_URL,
+        })
+
+        get_resp = session.get(self.SEARCH_URL, timeout=30)
+        get_resp.raise_for_status()
+        get_soup = BeautifulSoup(get_resp.text, "lxml")
+        token_tag = get_soup.find("input", {"name": "__RequestVerificationToken"})
+        if not token_tag or not token_tag.get("value"):
+            return self.error("Could not fetch FL DOH MQA CSRF token")
+
+        post_resp = session.post(
+            self.SEARCH_URL,
+            data={
+                "__RequestVerificationToken": token_tag["value"],
+                "SearchDto.LicenseNumber": license_number,
+                "SearchDto.Board": "",
+                "SearchDto.Profession": "",
+            },
+            timeout=30,
+            allow_redirects=True,
+        )
+        post_resp.raise_for_status()
+
+        text_lower = post_resp.text.lower()
+        if "no records" in text_lower or "no results" in text_lower:
+            return self.not_found(f"FL DOH MQA: no records for {license_number}")
+
+        soup = BeautifulSoup(post_resp.text, "lxml")
+        dl = soup.find("dl", class_="dl-horizontal")
+        if not dl:
+            return self.not_found(f"FL DOH MQA: could not parse detail page for {license_number}")
+
+        fields: dict[str, str] = {}
+        dts = dl.find_all("dt")
+        dds = dl.find_all("dd")
+        for dt, dd in zip(dts, dds):
+            label = " ".join(dt.get_text(" ", strip=True).split())
+            value = " ".join(dd.get_text(" ", strip=True).split())
+            if label:
+                fields[label] = value
+
+        status_text = fields.get("License Status", "").upper()
+        effective = _parse_date(fields.get("License Original Issue Date", ""))
+        expiration = _parse_date(fields.get("License Expiration Date", ""))
+        raw = {"fields": fields}
+
+        if "ACTIVE" in status_text or "CLEAR" in status_text:
+            return self.active(effective, expiration, raw)
+        if "EXPIRED" in status_text or "DELINQUENT" in status_text:
+            return self.expired(effective, expiration, raw)
+        if "NULL" in status_text or "REVOKED" in status_text or "TERMINATED" in status_text or "RETIRED" in status_text:
+            return self.terminated(effective, expiration, raw)
+
+        return VerificationResult(
+            status="NOT_FOUND",
+            raw_data=raw,
+            error_message=f"Unrecognized FL DOH MQA status: {fields.get('License Status')}",
         )

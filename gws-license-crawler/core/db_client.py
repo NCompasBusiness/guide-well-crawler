@@ -27,6 +27,17 @@ def _now_iso() -> str:
     return datetime.utcnow().isoformat(timespec="milliseconds") + "Z"
 
 
+def _to_datetime_iso(value: str | None) -> str | None:
+    """Normalize date/datetime strings to full ISO 8601 datetime that Prisma's
+    DateTime column accepts. Crawlers return date-only strings (YYYY-MM-DD);
+    Prisma needs YYYY-MM-DDTHH:MM:SS.sssZ."""
+    if value is None or value == "":
+        return None
+    if len(value) == 10 and value[4] == "-" and value[7] == "-":
+        return f"{value}T00:00:00.000Z"
+    return value
+
+
 @contextmanager
 def get_conn() -> Generator[sqlite3.Connection, None, None]:
     conn = sqlite3.connect(settings.DB_PATH, timeout=30)
@@ -114,7 +125,7 @@ def write_verification_result(
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (
                 verification_id, run_id, supplier_id, status,
-                effective_date, termination_date,
+                _to_datetime_iso(effective_date), _to_datetime_iso(termination_date),
                 raw_data_text, error_message,
                 1 if requires_manual else 0, manual_reason, _now_iso(),
             ),

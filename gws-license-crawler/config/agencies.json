@@ -11,6 +11,17 @@
     "notes": "Simple license number search form. Returns status and expiry date."
   },
   {
+    "crawlerKey": "fl_doh_mqa",
+    "name": "Florida Department of Health — Medical Quality Assurance",
+    "state": "FL",
+    "websiteUrl": "https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "ASP.NET MVC form. GET for CSRF token, POST license number, follow redirect to detail page. Covers Medical Board, Pharmacy, Podiatrists, Optometry, PT, OT, Orthotics/Prosthetics, Respiratory."
+  },
+  {
     "crawlerKey": "fl_dbpr",
     "name": "Florida Department of Business and Professional Regulation",
     "state": "FL",
@@ -25,12 +36,13 @@
     "crawlerKey": "ga_composite_medical",
     "name": "Georgia Composite Medical Board",
     "state": "GA",
-    "websiteUrl": "https://gcmb.mylicense.com/eGov/",
+    "websiteUrl": "https://medicalboard.georgia.gov/look-licensee",
+    "lookupUrl": "https://gateway.medicalboard.georgia.gov/verification/search.aspx",
     "tier": 2,
-    "isCaptchaBlocked": false,
+    "isCaptchaBlocked": true,
     "isUrlBroken": false,
     "isPasswordProtected": false,
-    "notes": "Multi-step navigation. Requires Selenium with explicit waits."
+    "notes": "reCAPTCHA-protected. Use manual-assist mode (human solves CAPTCHA in browser). lookupUrl is the deep-link to the search form."
   },
   {
     "crawlerKey": "ga_professional_licensing",
@@ -40,8 +52,8 @@
     "tier": 1,
     "isCaptchaBlocked": false,
     "isUrlBroken": false,
-    "isPasswordProtected": false,
-    "notes": "Simple lookup by license number and type."
+    "isPasswordProtected": true,
+    "notes": "Per reference sheet: username and password required. No credentials available; auto-routes to manual."
   },
   {
     "crawlerKey": "tx_dshs",
@@ -51,19 +63,20 @@
     "tier": 2,
     "isCaptchaBlocked": false,
     "isUrlBroken": false,
-    "isPasswordProtected": false,
-    "notes": "Requires navigation through facility type selection before license lookup."
+    "isPasswordProtected": true,
+    "notes": "Site now requires login at /datamart/mainMenu.do. No credentials available for demo; auto-routes to manual."
   },
   {
     "crawlerKey": "tx_hhs",
     "name": "Texas Health and Human Services",
     "state": "TX",
     "websiteUrl": "https://hhs.texas.gov/doing-business-hhs/provider-portals/health-care-professionals/verify-license-certification",
+    "lookupUrl": "https://hhs.texas.gov/doing-business-hhs/provider-portals/health-care-professionals/verify-license-certification",
     "tier": 3,
     "isCaptchaBlocked": true,
     "isUrlBroken": false,
     "isPasswordProtected": false,
-    "notes": "Google reCAPTCHA v2. Requires human-in-the-loop or captcha solving service."
+    "notes": "Google reCAPTCHA v2. Use manual-assist (human solves CAPTCHA). lookupUrl same as website for now."
   },
   {
     "crawlerKey": "nc_medical_board",
@@ -73,8 +86,8 @@
     "tier": 1,
     "isCaptchaBlocked": false,
     "isUrlBroken": false,
-    "isPasswordProtected": false,
-    "notes": "API-backed license lookup. POST request returns JSON."
+    "isPasswordProtected": true,
+    "notes": "Per reference sheet: username and password required. URL currently returns 404; auto-routes to manual."
   },
   {
     "crawlerKey": "oh_medical_board",
@@ -92,11 +105,12 @@
     "name": "Pennsylvania Department of State",
     "state": "PA",
     "websiteUrl": "https://www.dos.pa.gov/ProfessionalLicensing/LicenseRenewalInformation/Pages/default.aspx",
+    "lookupUrl": "https://www.pals.pa.gov/#!/page/search",
     "tier": 3,
     "isCaptchaBlocked": true,
     "isUrlBroken": false,
     "isPasswordProtected": false,
-    "notes": "Cloudflare challenge on some endpoints. Investigate alternative lookup URL."
+    "notes": "PALS portal with Cloudflare challenge. Use manual-assist (human clears challenge). lookupUrl is the SPA search route."
   },
   {
     "crawlerKey": "ny_opmc",
@@ -141,5 +155,16 @@
     "isUrlBroken": false,
     "isPasswordProtected": false,
     "notes": "Standard myLicense portal. Consistent across multiple license types."
+  },
+  {
+    "crawlerKey": "nj_mylicense",
+    "name": "New Jersey DCA — mylicense.com unified verification",
+    "state": "NJ",
+    "websiteUrl": "https://newjersey.mylicense.com/Verification/Search.aspx",
+    "tier": 1,
+    "isCaptchaBlocked": false,
+    "isUrlBroken": false,
+    "isPasswordProtected": false,
+    "notes": "mylicense.com ASP.NET portal. Search by license number, follow detail link. Covers Medical Examiners, Pharmacy, Optometry, Respiratory, Orthotics/Prosthetics, Ophthalmic Dispensers under one URL."
   }
 ]

@@ -15,16 +15,18 @@ from typing import Type
 from crawlers.base_crawler import BaseCrawler
 
 # ── State imports ─────────────────────────────────────────────────────────────
-from crawlers.states.florida import FlAhcaCrawler, FlDbprCrawler
+from crawlers.states.florida import FlAhcaCrawler, FlDbprCrawler, FlDohMqaCrawler
 from crawlers.states.georgia import GaCompositeMedicalCrawler, GaProfessionalLicensingCrawler
 from crawlers.states.texas import TxDshsCrawler, TxHhsCrawler
 from crawlers.states.north_carolina import NcMedicalBoardCrawler
 from crawlers.states.illinois import IlIdfprCrawler
+from crawlers.states.new_jersey import NjMyLicenseCrawler
 
 REGISTRY: dict[str, Type[BaseCrawler]] = {
     # Florida
     "fl_ahca": FlAhcaCrawler,
     "fl_dbpr": FlDbprCrawler,
+    "fl_doh_mqa": FlDohMqaCrawler,
     # Georgia
     "ga_composite_medical": GaCompositeMedicalCrawler,
     "ga_professional_licensing": GaProfessionalLicensingCrawler,
@@ -35,6 +37,8 @@ REGISTRY: dict[str, Type[BaseCrawler]] = {
     "nc_medical_board": NcMedicalBoardCrawler,
     # Illinois
     "il_idfpr": IlIdfprCrawler,
+    # New Jersey
+    "nj_mylicense": NjMyLicenseCrawler,
     # Add additional state crawlers here as they are implemented
 }
 
