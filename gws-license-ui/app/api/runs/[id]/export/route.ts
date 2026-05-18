@@ -25,32 +25,55 @@ export async function GET(
 
   if (!run) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const rows = run.verifications.map((v) => ({
-    'Supplier Name': v.supplier.supplierName,
-    'NPI': v.supplier.npi ?? '',
-    'State': v.supplier.state,
-    'License Number': v.supplier.licenseNumber,
-    'License Type': v.supplier.licenseType,
-    'Agency': v.supplier.agency.name,
-    'Verification Status': v.status,
-    'Effective Date': v.effectiveDate ? v.effectiveDate.toISOString().split('T')[0] : '',
-    'Termination Date': v.terminationDate ? v.terminationDate.toISOString().split('T')[0] : '',
-    'Requires Manual Review': v.requiresManual ? 'YES' : 'NO',
-    'Manual Reason': v.manualReason ?? '',
-    'Error Message': v.errorMessage ?? '',
-    'Manually Resolved': v.manualResolvedAt ? 'YES' : 'NO',
-    'Verified At': v.verifiedAt.toISOString(),
-  }))
+  const headers = [
+    'Supplier Name',
+    'NPI',
+    'State',
+    'License Number',
+    'License Type',
+    'Agency',
+    'Verification Status',
+    'Effective Date',
+    'Termination Date',
+    'Verification Method',
+    'Manual Reason',
+    'Error Message',
+    'Verified At',
+  ]
 
-  const workbook = XLSX.utils.book_new()
-  const sheet = XLSX.utils.json_to_sheet(rows)
+  const dataRows = run.verifications.map((v) => [
+    v.supplier.supplierName,
+    v.supplier.npi ?? '',
+    v.supplier.state,
+    v.supplier.licenseNumber,
+    v.supplier.licenseType ?? '',
+    v.supplier.agency.name,
+    v.status,
+    v.effectiveDate ? v.effectiveDate.toISOString().split('T')[0] : '',
+    v.terminationDate ? v.terminationDate.toISOString().split('T')[0] : '',
+    v.manualResolvedAt ? 'CAPTCHA-Assisted' : 'Automated',
+    v.manualReason ?? '',
+    v.errorMessage ?? '',
+    v.verifiedAt.toISOString().replace('T', ' ').split('.')[0],
+  ])
 
-  // Auto-size columns
-  const colWidths = Object.keys(rows[0] ?? {}).map((key) => ({
-    wch: Math.max(key.length, 15),
-  }))
+  const aoa = [headers, ...dataRows]
+  const sheet = XLSX.utils.aoa_to_sheet(aoa)
+
+  // Calculate column widths from actual content
+  const colWidths = headers.map((header, colIdx) => {
+    const maxDataLen = dataRows.reduce((max, row) => {
+      const cell = String(row[colIdx] ?? '')
+      return Math.max(max, cell.length)
+    }, 0)
+    return { wch: Math.min(Math.max(header.length, maxDataLen, 10), 60) }
+  })
   sheet['!cols'] = colWidths
 
+  // Auto-filter on header row
+  sheet['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(headers.length - 1)}1` }
+
+  const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, sheet, 'Verification Results')
 
   const buf = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
